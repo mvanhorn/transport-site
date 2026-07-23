@@ -71,6 +71,42 @@ defmodule Transport.Validators.NeTEx.ResultsAdapters.V0_2_0Test do
              V0_2_0.get_issues(binary_result, %{"issues_category" => "base-rules"}, pagination_config)
   end
 
+  describe "summary_from_binary/1" do
+    test "counts only the most severe level per category" do
+      errors = [
+        %{"code" => "xsd-1", "criticity" => "error", "message" => "Error A"},
+        %{"code" => "xsd-2", "criticity" => "error", "message" => "Error B"}
+      ]
+
+      informations = [
+        %{"code" => "rule-1", "criticity" => "information", "message" => "Info A"},
+        %{"code" => "rule-2", "criticity" => "information", "message" => "Info B"}
+      ]
+
+      result = %{
+        "xsd-schema" => errors,
+        "base-rules" => informations
+      }
+
+      summary = result |> V0_2_0.to_binary_result() |> V0_2_0.summary_from_binary()
+
+      assert length(summary) == 2
+
+      expect_stats(summary, "xsd-schema", %{"count" => 2, "criticity" => "error"})
+      expect_stats(summary, "base-rules", %{"count" => 2, "criticity" => "information"})
+    end
+
+    test "empty binary returns all categories with count 0 and NoError" do
+      summary = %{} |> V0_2_0.to_binary_result() |> V0_2_0.summary_from_binary()
+
+      # All 2 categories should be present even when empty
+      assert length(summary) == 2
+
+      expect_stats(summary, "xsd-schema", %{"count" => 0, "criticity" => "NoError"})
+      expect_stats(summary, "base-rules", %{"count" => 0, "criticity" => "NoError"})
+    end
+  end
+
   defp result_factory(counts) do
     counts
     |> Enum.flat_map(fn {category, count} ->
@@ -86,5 +122,11 @@ defmodule Transport.Validators.NeTEx.ResultsAdapters.V0_2_0Test do
     [item]
     |> Stream.cycle()
     |> Enum.take(times)
+  end
+
+  defp expect_stats(summary, category, %{"count" => _, "criticity" => _} = expected) do
+    category_summary = Enum.find(summary, &(&1["category"] == category))
+
+    assert category_summary["stats"] == expected
   end
 end
