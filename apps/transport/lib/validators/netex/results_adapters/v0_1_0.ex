@@ -238,7 +238,7 @@ defmodule Transport.Validators.NeTEx.ResultsAdapters.V0_1_0 do
 
   def order_issues_by_location(%Explorer.DataFrame{} = df) do
     df
-    |> DF.sort_by(&[&1["resource.filename"], &1["resource.line"], &1["message"]])
+    |> DF.sort_by(&[&1["criticity"], &1["resource.filename"], &1["resource.line"], &1["message"]])
   end
 
   @impl Transport.Validators.NeTEx.ResultsAdapter
